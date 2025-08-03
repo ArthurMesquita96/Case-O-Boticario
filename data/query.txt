@@ -1,0 +1,43 @@
+
+CREATE OR REPLACE TABLE `dados.bd_niveis_de_risco_por_produto` AS
+
+WITH
+
+base_niveis_risco_por_produto AS (
+  SELECT
+    sku.cod_projeto,
+    CAST(SPLIT(sku.des_nome_projeto, ' ')[1] AS INT64) AS des_nome_projeto,
+    sku.des_validade_projeto,
+    CAST(SPLIT(sku.des_marca, ' ')[1] AS INT64) AS des_marca,
+    CAST(SPLIT(sku.des_submarca, ' ')[1] AS INT64) AS des_submarca,
+    CAST(SPLIT(sku.des_categoria_ped, ' ')[1] AS INT64) AS des_categoria_ped,
+    CAST(SPLIT(sku.des_subcategoria, ' ')[1] AS INT64) AS des_subcategoria,
+    CAST(SPLIT(sku.des_embalagem, ' ')[1] AS INT64) AS des_embalagem,
+    CAST(SPLIT(sku.des_base_estrutura, ' ')[1] AS INT64) AS des_base_estrutura,
+    CAST(SPLIT(sku.des_fragrancia_cor, ' ')[1] AS INT64) AS des_fragrancia_cor,
+    sku.des_ciclo_vida_projeto,
+    sku.cod_produto,
+    CAST(SPLIT(sku.des_material, ' ')[1] AS INT64) AS des_material,
+    sku.des_validade_material,
+    sku.ano_ciclo_previsto,
+    vlr_temperatura,
+    CASE
+      WHEN des_validade_material = 'ATIVO' AND riscos.vlr_temperatura IN ('1', '2') THEN '1. SEM_RISCO'
+      WHEN des_validade_material = 'ATIVO' AND riscos.vlr_temperatura = '3' THEN '2. BAIXO_RISCO'
+      WHEN des_validade_material = 'ATIVO' AND riscos.vlr_temperatura = '4' THEN '3. RISCO_MODERADO'
+      WHEN des_validade_material = 'ATIVO' AND riscos.vlr_temperatura = '5' THEN '4. RISCO_ALTO'
+      WHEN des_validade_material = 'ATIVO' AND riscos.vlr_temperatura = '6' THEN '5. IMPACTO_PROJETADO'
+      WHEN des_validade_material = 'ATIVO' THEN '0. DESCONHECIDO'
+    END AS des_temperatura
+  FROM `dados.bd_projetos_skus` AS sku
+  LEFT JOIN `dados.bd_riscos` AS riscos
+    ON sku.cod_produto = riscos.cod_produto
+  WHERE 1 = 1
+    AND sku.des_validade_material = 'ATIVO'
+)
+
+SELECT
+  *
+FROM base_niveis_risco_por_produto
+WHERE 1 = 1
+
