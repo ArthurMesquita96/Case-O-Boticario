@@ -29,7 +29,6 @@ def save_picked_file(file, name):
     """
     return joblib.dump(file, f'{name}.pkl', compress=3)
 
-
 def load_picked_file(name):
     """
     Carrega um objeto Python de um arquivo `.pkl`.
@@ -41,7 +40,6 @@ def load_picked_file(name):
         object: Objeto desserializado do arquivo.
     """
     return joblib.load(f'{name}.pkl')
-
 
 def save_parquet_file(file, name):
     """
@@ -57,7 +55,6 @@ def save_parquet_file(file, name):
     table = pa.Table.from_pandas(file)
     return pq.write_table(table, f'{name}.parquet')
 
-
 def load_parquet_file(name):
     """
     Carrega um arquivo `.parquet` e o converte em um DataFrame.
@@ -70,7 +67,6 @@ def load_parquet_file(name):
     """
     table = pq.read_table(f'{name}.parquet')
     return table.to_pandas()
-
 
 def load_data_bigquery(projeto, query):
     """
@@ -92,7 +88,6 @@ def load_data_bigquery(projeto, query):
 
     return pd.DataFrame(df_list)
 
-
 def create_table_bigquery(projeto, dataset, table_name, data):
     """
     Cria ou sobrescreve uma tabela no BigQuery com os dados de um DataFrame.
@@ -112,7 +107,6 @@ def create_table_bigquery(projeto, dataset, table_name, data):
     job.result()
     
     return "Done!"
-
 
 def salvar_grafico(nome_arquivo, pasta_destino, figura=None, formato='png', dpi=300):
     """
@@ -139,7 +133,6 @@ def salvar_grafico(nome_arquivo, pasta_destino, figura=None, formato='png', dpi=
     print(f"Gráfico salvo em: {caminho_completo}")
 
     return None
-
 
 def padronizar_coluna_data(df, coluna):
     """
@@ -173,7 +166,6 @@ def padronizar_coluna_data(df, coluna):
     df[coluna] = df[coluna].dt.strftime('%Y-%m-%d')
     df[coluna] = pd.to_datetime(df[coluna], errors='coerce')
     return df
-
 
 def statistics(data):
     """
@@ -220,10 +212,9 @@ def statistics(data):
 
     return np.round(metrics, 1)
 
-
 ## Plots
 
-def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kwargs = {}, loop_feature = None, figure = None, figsize = (15,15), label = True, save_image = False, nome_imagem='imagem', formato='png', dpi=700, pasta_destino='images/'):
+def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kwargs = {}, axis_ref = None, figure = None, figsize = (15,15), label = True, save_image = False, nome_imagem='imagem', formato='png', dpi=700, pasta_destino='images/'):
 
     """
     Cria uma matriz de gráficos para comparar visualmente múltiplas variáveis.
@@ -236,7 +227,7 @@ def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kw
         plot (callable): Função de plotagem (ex: sns.barplot, sns.lineplot).
         sort_by (str, optional): Coluna usada para ordenar os dados.
         plot_kwargs (dict, optional): Argumentos adicionais passados para a função de plot.
-        loop_feature (str, optional): Parâmetro da função de plotagem que será atualizado com o nome da feature.
+        axis_ref (str, optional): Parâmetro da função de plotagem que será atualizado com o nome da feature.
         figure (matplotlib.figure.Figure, optional): Figura existente para reutilização.
         figsize (tuple, optional): Tamanho da figura (largura, altura).
         label (bool, optional): Se True, adiciona rótulos aos gráficos.
@@ -269,8 +260,8 @@ def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kw
                 else:
                     data = data.sort_values(f'{feature}',ascending = False)
 
-                if loop_feature:
-                    plot_kwargs[loop_feature] = feature
+                if axis_ref:
+                    plot_kwargs[axis_ref] = feature
                     
                 plt.subplot(grid[r_number, c_number])
                 plt.title(f'{feature}')
@@ -280,7 +271,7 @@ def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kw
 
                 if label:
                     if plot.__name__ == 'lineplot':
-                        if loop_feature == 'y':
+                        if axis_ref == 'y':
                             y_col = feature
                             x_col = plot_kwargs['x']
                         else:
@@ -353,7 +344,35 @@ def split_dataset(data, test_size, target):
 
     return X, Y
 
-def target_encoding(df, column, train = True, final=False) :
+def onehot_encoding(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """
+    Aplica One-Hot Encoding em uma coluna categórica de um DataFrame.
+
+    Parâmetros:
+    -----------
+    df : pd.DataFrame
+        DataFrame original.
+    column : str
+        Nome da coluna que será codificada.
+
+    Retorna:
+    --------
+    pd.DataFrame
+        Novo DataFrame com as colunas codificadas e a coluna original removida.
+    """
+    # Verifica se a coluna existe no DataFrame
+    if column not in df.columns:
+        raise ValueError(f"A coluna '{column}' não existe no DataFrame.")
+
+    # Cria as variáveis dummies (0 e 1)
+    dummies = pd.get_dummies(df[column], prefix=column, dtype=int)
+
+    # Concatena as novas colunas ao DataFrame original (sem a original)
+    df_encoded = pd.concat([df.drop(columns=[column]), dummies], axis=1)
+
+    return df_encoded
+
+def target_encoding(df: pd.DataFrame, column: str, TARGET: str, train = True, final=False) -> pd.DataFrame :
     """
     Aplica codificação target encoding em uma variável categórica com base na média da variável 'risco'.
 
@@ -369,7 +388,7 @@ def target_encoding(df, column, train = True, final=False) :
     data = df.copy()
 
     if train:
-        media_por_categoria = data[[column,'risco']].groupby(column).agg(total=('risco','mean')).reset_index()
+        media_por_categoria = data[[column,TARGET]].groupby(column).agg(total=(TARGET,'mean')).reset_index()
         media_por_categoria['total'] = round(media_por_categoria['total'],2)
         media_por_categoria = media_por_categoria.set_index(column)['total'].to_dict()
 
@@ -392,7 +411,7 @@ def target_encoding(df, column, train = True, final=False) :
 
     return data
 
-def frequency_encoding(df, column, train=True, final=False):
+def frequency_encoding(df: pd.DataFrame, column: str, train=True, final=False) -> pd.DataFrame:
     """
     Aplica codificação por frequência em uma coluna categórica.
 
@@ -441,8 +460,7 @@ def frequency_encoding(df, column, train=True, final=False):
 
     return data
 
-
-def cyclical_encoding(df, column, final = False):
+def cyclical_encoding(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     Aplica codificação cíclica a colunas com dados periódicos (como mês ou ano).
 
@@ -463,7 +481,7 @@ def cyclical_encoding(df, column, final = False):
         case 'ano_ciclo_previsto':
             max_value = df[column].max()
         case 'mes_ciclo_previsto':
-            max_value = 12     
+            max_value = 12
 
     data[f'{column}_sin'] = data[f'{column}'].apply(lambda x: np.sin(x*(2*np.pi/max_value)))
     data[f'{column}_cos'] = data[f'{column}'].apply(lambda x: np.cos(x*(2*np.pi/max_value)))
