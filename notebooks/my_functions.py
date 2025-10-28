@@ -223,14 +223,14 @@ def statistics(data):
 
 ## Plots
 
-def plot_matrix(data, columns_features, n_rows, n_cols, plot, sort_by= None, plot_kwargs = {}, loop_feature = None, figure = None, figsize = (15,15), label = True, save_image = False, nome_imagem='imagem', formato='png', dpi=700, pasta_destino='images/'):
+def plot_matrix(data, columns_plot, n_rows, n_cols, plot, sort_by= None, plot_kwargs = {}, loop_feature = None, figure = None, figsize = (15,15), label = True, save_image = False, nome_imagem='imagem', formato='png', dpi=700, pasta_destino='images/'):
 
     """
     Cria uma matriz de gráficos para comparar visualmente múltiplas variáveis.
 
     Args:
         data (pd.DataFrame): Conjunto de dados de entrada.
-        columns_features (list): Lista de colunas a serem plotadas.
+        columns_plot (list): Lista de colunas a serem plotadas.
         n_rows (int): Número de linhas da grade de plots.
         n_cols (int): Número de colunas da grade de plots.
         plot (callable): Função de plotagem (ex: sns.barplot, sns.lineplot).
@@ -257,12 +257,12 @@ def plot_matrix(data, columns_features, n_rows, n_cols, plot, sort_by= None, plo
     else:
         plt.figure(figsize=figsize)
 
-    for r in range(0, n_rows):
-        for c in range(0, n_cols ):
-            if (c + r*n_cols) >= len(columns_features):
+    for r_number in range(0, n_rows):
+        for c_number in range(0, n_cols ):
+            if (c_number + r_number*n_cols) >= len(columns_plot):
                 break
             else:
-                feature = columns_features[ (c + r*n_cols) ]
+                feature = columns_plot[ (c_number + r_number*n_cols) ]
 
                 if sort_by:
                     data = data.sort_values(f'{sort_by}',ascending = False)
@@ -272,7 +272,7 @@ def plot_matrix(data, columns_features, n_rows, n_cols, plot, sort_by= None, plo
                 if loop_feature:
                     plot_kwargs[loop_feature] = feature
                     
-                plt.subplot(grid[r, c])
+                plt.subplot(grid[r_number, c_number])
                 plt.title(f'{feature}')
                 g = plot(data = data, **plot_kwargs)
 
@@ -346,12 +346,12 @@ def split_dataset(data, test_size, target):
     """
     dados = data.copy()
 
-    A1, B1, A2, B2 = ms.train_test_split(dados.drop(target, axis=1), dados[target], test_size=test_size, random_state=0)
+    X1, Y1, X2, Y2 = ms.train_test_split(dados.drop(target, axis=1), dados[target], test_size=test_size, random_state=0)
     
-    A = pd.concat([A1,A2], axis=1)
-    B = pd.concat([B1,B2], axis=1)
+    X = pd.concat([X1,X2], axis=1)
+    Y = pd.concat([Y1,Y2], axis=1)
 
-    return A, B
+    return X, Y
 
 def target_encoding(df, column, train = True, final=False) :
     """
